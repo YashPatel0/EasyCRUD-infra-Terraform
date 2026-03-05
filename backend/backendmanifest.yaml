@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: studentapp
-        image: yashpatel017/easycrud_backend:v2
+        image: yashpatel017/easycrud_backend:v4
         imagePullPolicy: Always
         resources:
           limits:
