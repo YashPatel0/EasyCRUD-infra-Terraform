@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: studentapp
-        image: yashpatel017/easycrud_backend:v4
+        image: yashpatel017/easycrud_backend:v1
         imagePullPolicy: Always
         resources:
           limits:
@@ -38,7 +38,6 @@ metadata:
   labels:
     app: studentapp
 spec:
-  type: LoadBalancer
   selector:
     app: studentapp
   ports:
