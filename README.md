@@ -80,9 +80,9 @@ Update the **application.properties** file.
 ```
 server.port=8080
 
-spring.datasource.url=jdbc:mariadb://db-instance.c9o0wcyo6tld.ap-south-1.rds.amazonaws.com:3306/studentapp_db?sslMode=required
-spring.datasource.username=yash
-spring.datasource.password=yashpatel
+spring.datasource.url=jdbc:mariadb://<rds_endpoint>:3306/<database-name>?sslMode=required
+spring.datasource.username=user
+spring.datasource.password=pass
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
