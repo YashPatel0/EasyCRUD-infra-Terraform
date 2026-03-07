@@ -1,58 +1,306 @@
-# MariaDB Setup and Configuration Guide for Windows
+# EasyCRUD Full Stack Deployment on AWS (EKS + RDS + S3)
 
-This guide explains how to set up MariaDB, create a database, and Create Database User
+## Project Overview
 
-## 1. Installing MariaDB
+This project demonstrates deployment of a **full-stack CRUD application** on AWS using modern DevOps tools.
 
-Installing MariaDB on Ubntu
+* **Frontend**: Vite-based web application hosted on **Amazon S3**
+* **Backend**: Spring Boot REST API deployed on **Amazon EKS**
+* **Database**: **Amazon RDS (MariaDB/MySQL)**
+* **Containerization**: Docker
+* **Orchestration**: Kubernetes (EKS)
 
-```shell
-apt update && apt install mariadb-server -y
+The goal of this project is to showcase a **real-world DevOps deployment workflow** using AWS cloud services.
+
+---
+
+# Architecture
+
+User → S3 Static Website → AWS LoadBalancer → EKS Backend Pods → Amazon RDS Database
+
+---
+
+# Technologies Used
+
+* AWS EKS (Kubernetes)
+* AWS RDS
+* AWS S3 Static Website Hosting
+* Docker
+* Kubernetes
+* Spring Boot
+* Vite (Frontend)
+* DockerHub
+* AWS CloudShell
+
+---
+
+# Step 1: Create Infrastructure
+
+Create the following AWS resources:
+
+* Amazon **EKS Cluster**
+* Amazon **RDS Database**
+* Amazon **S3 Bucket**
+
+Example S3 bucket name used in this project:
+
+```
+yash-buxx
 ```
 
-## 2. Securing MariaDB
+---
 
-Open the Command Prompt as Administrator and run the following command to secure your installation:
+# Step 2: Create Database in RDS
 
-```shell
+After creating the RDS instance, create a database.
 
-mysql_secure_installation
+Example database name:
+
+```
+studentapp_db
 ```
 
-Follow the prompts to:
-Set a root password.
-Remove insecure default users and test databases.
-Disable remote root login.
+---
 
-## 3. Setting Up the Database
+# Step 3: Clone the Application
 
-Open terminal and login to MariaDB:
+Clone the project repository:
 
 ```bash
-
-mysql -u root -p
+git clone <repository-url>
+cd project-folder
 ```
 
-Enter the root password when prompted.
+---
 
-Create a new database and user:
+# Step 4: Configure Backend Database Connection
 
-```sql
-CREATE DATABASE student_db;
-GRANT ALL PRIVILEGES ON springbackend.* TO 'username'@'localhost' IDENTIFIED BY 'your_password';
+Update the **application.properties** file.
+
 ```
-Replace username and your_password with your desired username and password.
+server.port=8080
 
-Exit MariaDB:
+spring.datasource.url=jdbc:mariadb://db-instance.c9o0wcyo6tld.ap-south-1.rds.amazonaws.com:3306/studentapp_db?sslMode=required
+spring.datasource.username=yash
+spring.datasource.password=yashpatel
 
-```sql
-
-EXIT;
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.database-platform=org.hibernate.dialect.MariaDBDialect
 ```
 
-## 4. You will need Database Credentials to Connect Backend with Database
-1. DB_HOST
-2. DB_USER
-3. DB_PASS
-4. DB_PORT
-5. DB_NAME
+---
+
+# Step 5: Build Backend Docker Image
+
+Build and push the backend image to DockerHub.
+
+```bash
+docker build -t easycrud_backend .
+docker tag easycrud_backend <dockerhub-username>/easycrud_backend:v1
+docker push <dockerhub-username>/easycrud_backend:v1
+```
+
+---
+
+# Step 6: Deploy Backend to Kubernetes (EKS)
+
+Create a **Kubernetes manifest file** for backend deployment and service.
+
+Use **LoadBalancer service** because the backend must be accessible **outside the Kubernetes cluster**.
+
+Example deployment:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: studentapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: studentapp
+  template:
+    metadata:
+      labels:
+        app: studentapp
+    spec:
+      containers:
+      - name: studentapp
+        image: <dockerhub-username>/easycrud_backend:v1
+        ports:
+        - containerPort: 8080
+```
+
+Example service:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: studentapp-svc
+spec:
+  type: LoadBalancer
+  selector:
+    app: studentapp
+  ports:
+  - port: 8080
+    targetPort: 8080
+```
+
+Apply manifest:
+
+```bash
+kubectl apply -f backend-manifest.yaml
+```
+
+Verify backend pod:
+
+```bash
+kubectl get pods
+kubectl get svc
+```
+
+Copy the **LoadBalancer DNS or IP** for frontend configuration.
+
+---
+
+# Step 7: Configure Frontend
+
+Inside the **frontend folder**, update the `.env` file.
+
+```
+VITE_API_URL="http://<load-balancer-ip>:8080/api"
+```
+
+---
+
+# Step 8: Build Frontend Docker Image
+
+```bash
+docker build -t easycrud_frontend .
+docker tag easycrud_frontend <dockerhub-username>/easycrud_frontend:v1
+docker push <dockerhub-username>/easycrud_frontend:v1
+```
+
+---
+
+# Step 9: Deploy Frontend in Kubernetes
+
+Create a Kubernetes manifest for frontend deployment.
+
+```bash
+kubectl apply -f frontend-manifest.yaml
+```
+
+Verify:
+
+```bash
+kubectl get pods
+```
+
+---
+
+# Step 10: Build Static Files for S3
+
+Inside the frontend folder run:
+
+```bash
+npm install
+npm run build
+```
+
+This creates a **dist** folder.
+
+Example structure:
+
+```
+dist/
+ ├── index.html
+ ├── vite.svg
+ └── assets/
+```
+
+---
+
+# Step 11: Upload Frontend to S3
+
+Navigate to the dist folder:
+
+```bash
+cd dist
+ls
+```
+
+Expected output:
+
+```
+assets  index.html  vite.svg
+```
+
+Upload files to S3:
+
+```bash
+aws s3 cp . s3://yash-buxx/ --recursive
+```
+
+---
+
+# Step 12: Enable S3 Static Website Hosting
+
+Go to:
+
+```
+S3 → yash-buxx → Properties
+```
+
+Enable **Static Website Hosting**
+
+Configuration:
+
+```
+Index document: index.html
+Error document: index.html
+```
+
+---
+
+# Step 13: Allow Public Access to Bucket
+
+Add the following **bucket policy**:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::yash-buxx/*"
+    }
+  ]
+}
+```
+
+---
+
+# Final Result
+
+Frontend hosted on **Amazon S3**
+
+Backend running on **Amazon EKS**
+
+Database running on **Amazon RDS**
+
+Architecture:
+
+User → S3 Static Website → AWS LoadBalancer → EKS Backend → RDS Database
+
+---
+
+# Author
+
+Yash Patel
+DevOps / Cloud Project
