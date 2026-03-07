@@ -38,6 +38,7 @@ metadata:
   labels:
     app: studentapp
 spec:
+  type: LoadBalancer
   selector:
     app: studentapp
   ports:
