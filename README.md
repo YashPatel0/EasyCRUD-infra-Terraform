@@ -303,4 +303,4 @@ User → S3 Static Website → AWS LoadBalancer → EKS Backend → RDS Database
 # Author
 
 Yash Patel
-DevOps / Cloud Project
+DevOps / Cloud Engineer
